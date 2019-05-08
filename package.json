@@ -1,0 +1,25 @@
+{
+  "name": "Beths",
+  "version": "0.1.0",
+  "dependencies": {
+    "dotenv": "^8.0.0",
+    "openzeppelin-solidity": "^2.2.0",
+    "sol-verifier": "^1.2.1",
+    "solidity-docgen": "^0.2.0-alpha.0",
+    "truffle-flattener": "^1.3.0",
+    "truffle-hdwallet-provider": "^1.0.8",
+    "web3": "^1.0.0-beta.54",
+    "web3-utils": "^1.0.0-beta.54"
+  },
+  "scripts": {
+    "test": "truffle test",
+    "docs": "./node_modules/.bin/solidity-docgen",
+    "flatten": "./node_modules/.bin/truffle-flattener",
+    "verify": "./node_modules/.bin/sol-verifier"
+  },
+  "devDependencies": {
+    "eslint": "^5.16.0",
+    "eslint-config-airbnb-base": "^13.1.0",
+    "eslint-plugin-import": "^2.17.2"
+  }
+}
