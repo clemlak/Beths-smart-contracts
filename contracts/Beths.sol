@@ -24,6 +24,7 @@ contract Beths is Ownable {
         ProposedOutcome initiatorOutcome;
         ProposedOutcome responderOutcome;
         bool areFundsWithdrawn;
+        bool hasBeenDisputed;
     }
 
     Bet[] public bets;
@@ -39,9 +40,9 @@ contract Beths is Ownable {
         address responder,
         address mediator,
         uint256 amount,
-        string memory currency,
+        string calldata currency,
         uint256 deadline
-    ) public {
+    ) external {
         require(
             supportedTokens[currency] != address(0),
             "Token is not supported"
@@ -70,13 +71,17 @@ contract Beths is Ownable {
                 deadline: deadline,
                 initiatorOutcome: ProposedOutcome.Undefined,
                 responderOutcome: ProposedOutcome.Undefined,
-                areFundsWithdrawn: false
+                areFundsWithdrawn: false,
+                hasBeenDisputed: false
             })
         );
     }
 
-    /*
-    function joinBet(uint256 betId) public {
+    function addCurrency(string calldata symbol, address tokenAddress) external onlyOwner() {
+        supportedTokens[symbol] = tokenAddress;
+    }
+
+    function joinBet(uint256 betId) external {
         require(
             bets[betId].status == Status.Open,
             "Bet is not open anymore"
@@ -87,7 +92,7 @@ contract Beths is Ownable {
             "You cannot join this bet"
         );
 
-        IERC20 token = new IERC20(supportedTokens[bets[betId].currency]);
+        IERC20 token = IERC20(supportedTokens[bets[betId].currency]);
 
         require(
             token.allowance(msg.sender, address(this)) >= bets[betId].amount,
@@ -105,8 +110,8 @@ contract Beths is Ownable {
     function proposeOutcome(
         uint256 betId,
         ProposedOutcome proposedOutcome,
-        string proof
-    ) public {
+        string calldata proof
+    ) external {
         require(
             bets[betId].status == Status.OnGoing,
             "Bet is not on going"
@@ -124,9 +129,7 @@ contract Beths is Ownable {
             "Proposed outcome is not valid"
         );
 
-        if (proof.length > 0) {
-            betsToProofs[betId].push(proof);
-        }
+        betsToProofs[betId].push(proof);
 
         if (msg.sender == bets[betId].initiator) {
             bets[betId].initiatorOutcome = proposedOutcome;
@@ -134,16 +137,23 @@ contract Beths is Ownable {
             bets[betId].responderOutcome = proposedOutcome;
         }
 
-        if (bets[betId].initiatorOutcome == bets[betId].responderOutcome) {
-            if (bets[betId].responderOutcome == ProposedOutcome.Won) {
-                bets[betId].status = Status.Won;
+        if (bets[betId].initiatorOutcome != ProposedOutcome.Undefined
+            && bets[betId].responderOutcome != ProposedOutcome.Undefined
+        ) {
+            if (bets[betId].initiatorOutcome == bets[betId].responderOutcome) {
+                if (bets[betId].initiatorOutcome == ProposedOutcome.Won) {
+                    bets[betId].status = Status.Won;
+                } else {
+                    bets[betId].status = Status.Lost;
+                }
             } else {
-                bets[betId].status = Status.Lost;
+                bets[betId].status = Status.Disputed;
             }
         }
     }
 
-    function getFunds(uint256 betId) public {
+    /* solhint-disable-next-line function-max-lines */
+    function getFunds(uint256 betId) external {
         require(
             msg.sender == bets[betId].initiator
             || msg.sender == bets[betId].responder,
@@ -169,24 +179,102 @@ contract Beths is Ownable {
             receiver = bets[betId].responder;
         }
 
-        IERC20 token = new IERC20(supportedTokens[bets[betId].currency]);
+        IERC20 token = IERC20(supportedTokens[bets[betId].currency]);
 
-        uint256 fees = SafeMath.mul(
-            bets[betId].amount / 100,
-            fee
+        uint256 totalAmount = SafeMath.mul(bets[betId].amount, 2);
+
+        uint256 ownerFees = SafeMath.mul(
+            totalAmount / 100,
+            ownerFee
         );
 
         bets[betId].areFundsWithdrawn = true;
 
+        uint256 mediatorFees = 0;
+
+        if (bets[betId].hasBeenDisputed) {
+            mediatorFees = SafeMath.mul(
+                totalAmount / 100,
+                mediatorFee
+            );
+
+            require(
+                token.transfer(bets[betId].mediator, mediatorFees),
+                "Transfer failed"
+            );
+        }
+
         require(
-            token.transfer(receiver, SafeMath.sub(bets[betId].amount, fees)),
+            token.transfer(receiver, SafeMath.sub(totalAmount, SafeMath.add(ownerFees, mediatorFees))),
             "Transfer failed"
         );
 
         require(
-            token.transfer(owner, fees),
+            token.transfer(owner(), ownerFees),
             "Transfer failed"
         );
     }
-    */
+
+    function solveDispute(uint256 betId, Status outcome) external {
+        require(
+            msg.sender == bets[betId].mediator,
+            "Sender must be the mediator"
+        );
+
+        require(
+            bets[betId].status == Status.Disputed,
+            "Bet is not disputed"
+        );
+
+        require(
+            outcome == Status.Won
+            || outcome == Status.Lost,
+            "Outcome must be won or lost"
+        );
+
+        bets[betId].status = outcome;
+        bets[betId].hasBeenDisputed = true;
+    }
+
+    function getBetStatus(uint256 betId) external view returns (
+        Status status
+    ) {
+        return bets[betId].status;
+    }
+
+    function getBetInfo(uint256 betId) external view returns (
+        address,
+        address,
+        address,
+        uint256,
+        string memory,
+        uint256
+    ) {
+        return (
+            bets[betId].initiator,
+            bets[betId].responder,
+            bets[betId].mediator,
+            bets[betId].amount,
+            bets[betId].currency,
+            bets[betId].deadline
+        );
+    }
+
+    function getBetOutcome(uint256 betId) external view returns (
+        ProposedOutcome,
+        ProposedOutcome,
+        bool
+    ) {
+        return (
+            bets[betId].initiatorOutcome,
+            bets[betId].responderOutcome,
+            bets[betId].hasBeenDisputed
+        );
+    }
+
+    function areFundsWithdrawn(uint256 betId) external view returns (
+        bool
+    ) {
+        return bets[betId].areFundsWithdrawn;
+    }
 }
