@@ -17,13 +17,13 @@ contract Beths is Ownable, UsernameManager {
     struct Bet {
         Status status;
         address initiator;
-        address responder;
+        address opponent;
         address mediator;
         uint256 amount;
         string currency;
         uint256 deadline;
         ProposedOutcome initiatorOutcome;
-        ProposedOutcome responderOutcome;
+        ProposedOutcome opponentOutcome;
         bool areFundsWithdrawn;
         bool hasBeenDisputed;
     }
@@ -40,11 +40,11 @@ contract Beths is Ownable, UsernameManager {
     event BetCreated(
         uint256 betId,
         address indexed initiator,
-        address indexed responder
+        address indexed opponent
     );
 
     function createBet(
-        address responder,
+        address opponent,
         address mediator,
         uint256 amount,
         string calldata currency,
@@ -71,19 +71,19 @@ contract Beths is Ownable, UsernameManager {
             Bet({
                 status: Status.Open,
                 initiator: msg.sender,
-                responder: responder,
+                opponent: opponent,
                 mediator: mediator,
                 amount: amount,
                 currency: currency,
                 deadline: deadline,
                 initiatorOutcome: ProposedOutcome.Undefined,
-                responderOutcome: ProposedOutcome.Undefined,
+                opponentOutcome: ProposedOutcome.Undefined,
                 areFundsWithdrawn: false,
                 hasBeenDisputed: false
             })
         ) - 1;
 
-        emit BetCreated(betId, msg.sender, responder);
+        emit BetCreated(betId, msg.sender, opponent);
     }
 
     function addCurrency(string calldata symbol, address tokenAddress) external onlyOwner() {
@@ -97,7 +97,7 @@ contract Beths is Ownable, UsernameManager {
         );
 
         require(
-            bets[betId].responder == msg.sender,
+            bets[betId].opponent == msg.sender,
             "You cannot join this bet"
         );
 
@@ -128,8 +128,8 @@ contract Beths is Ownable, UsernameManager {
 
         require(
             msg.sender == bets[betId].initiator
-            || msg.sender == bets[betId].responder,
-            "Sender must be the initiator or the responder"
+            || msg.sender == bets[betId].opponent,
+            "Sender must be the initiator or the opponent"
         );
 
         require(
@@ -143,13 +143,13 @@ contract Beths is Ownable, UsernameManager {
         if (msg.sender == bets[betId].initiator) {
             bets[betId].initiatorOutcome = proposedOutcome;
         } else {
-            bets[betId].responderOutcome = proposedOutcome;
+            bets[betId].opponentOutcome = proposedOutcome;
         }
 
         if (bets[betId].initiatorOutcome != ProposedOutcome.Undefined
-            && bets[betId].responderOutcome != ProposedOutcome.Undefined
+            && bets[betId].opponentOutcome != ProposedOutcome.Undefined
         ) {
-            if (bets[betId].initiatorOutcome == bets[betId].responderOutcome) {
+            if (bets[betId].initiatorOutcome == bets[betId].opponentOutcome) {
                 if (bets[betId].initiatorOutcome == ProposedOutcome.Won) {
                     bets[betId].status = Status.Won;
                 } else {
@@ -165,8 +165,8 @@ contract Beths is Ownable, UsernameManager {
     function getFunds(uint256 betId) external {
         require(
             msg.sender == bets[betId].initiator
-            || msg.sender == bets[betId].responder,
-            "Sender must be the initiator or the responder"
+            || msg.sender == bets[betId].opponent,
+            "Sender must be the initiator or the opponent"
         );
 
         require(
@@ -185,7 +185,7 @@ contract Beths is Ownable, UsernameManager {
         if (bets[betId].status == Status.Won) {
             receiver = bets[betId].initiator;
         } else {
-            receiver = bets[betId].responder;
+            receiver = bets[betId].opponent;
         }
 
         IERC20 token = IERC20(supportedTokens[bets[betId].currency]);
@@ -261,7 +261,7 @@ contract Beths is Ownable, UsernameManager {
     ) {
         return (
             bets[betId].initiator,
-            bets[betId].responder,
+            bets[betId].opponent,
             bets[betId].mediator,
             bets[betId].amount,
             bets[betId].currency,
@@ -276,7 +276,7 @@ contract Beths is Ownable, UsernameManager {
     ) {
         return (
             bets[betId].initiatorOutcome,
-            bets[betId].responderOutcome,
+            bets[betId].opponentOutcome,
             bets[betId].hasBeenDisputed
         );
     }
