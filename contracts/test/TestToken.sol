@@ -10,6 +10,6 @@ contract TestToken is ERC20, ERC20Detailed {
         "TT",
         18
     ) {
-        _mint(msg.sender, 21000000 * 10 ** 18);
+        _mint(msg.sender, 1000000 * 10 ** 18);
     }
 }
