@@ -3,13 +3,14 @@ pragma solidity 0.5.8;
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "./UsernameManager.sol";
 
 
 /**
  * @title An amazing project called Beths
  * @dev This contract is the base of our project
  */
-contract Beths is Ownable {
+contract Beths is Ownable, UsernameManager {
     enum Status { Open, OnGoing, Disputed, Won, Lost }
     enum ProposedOutcome { Undefined, Won, Lost }
 
@@ -36,6 +37,12 @@ contract Beths is Ownable {
     uint256 public ownerFee = 2;
     uint256 public mediatorFee = 2;
 
+    event BetCreated(
+        uint256 betId,
+        address indexed initiator,
+        address indexed responder
+    );
+
     function createBet(
         address responder,
         address mediator,
@@ -60,7 +67,7 @@ contract Beths is Ownable {
             "Transfer failed"
         );
 
-        bets.push(
+        uint256 betId = bets.push(
             Bet({
                 status: Status.Open,
                 initiator: msg.sender,
@@ -74,7 +81,9 @@ contract Beths is Ownable {
                 areFundsWithdrawn: false,
                 hasBeenDisputed: false
             })
-        );
+        ) - 1;
+
+        emit BetCreated(betId, msg.sender, responder);
     }
 
     function addCurrency(string calldata symbol, address tokenAddress) external onlyOwner() {
