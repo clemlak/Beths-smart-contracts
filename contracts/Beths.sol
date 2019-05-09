@@ -43,6 +43,11 @@ contract Beths is Ownable, UsernameManager {
         address indexed opponent
     );
 
+    event CurrencyAdded(
+        string symbol,
+        address tokenContract
+    );
+
     function createBet(
         address opponent,
         address mediator,
@@ -88,6 +93,8 @@ contract Beths is Ownable, UsernameManager {
 
     function addCurrency(string calldata symbol, address tokenAddress) external onlyOwner() {
         supportedTokens[symbol] = tokenAddress;
+
+        emit CurrencyAdded(symbol, tokenAddress);
     }
 
     function joinBet(uint256 betId) external {
