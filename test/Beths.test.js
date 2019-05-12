@@ -51,16 +51,11 @@ contract('Beths', (accounts) => {
       },
     ));
 
-    it('Should add TestToken as a supported token', () => beths.addCurrency(
-      'TT',
-      testToken.address,
-    ));
-
     it('Should create a new bet', () => beths.createBet(
       accounts[2],
       accounts[3],
       Utils.toWei('50'),
-      'TT',
+      testToken.address,
       toSolidityTimestamp(Date.now() + 1000 * 60 * 60), {
         from: accounts[1],
       },
