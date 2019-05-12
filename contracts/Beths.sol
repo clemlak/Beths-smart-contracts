@@ -20,7 +20,7 @@ contract Beths is Ownable, UsernameManager {
         address opponent;
         address mediator;
         uint256 amount;
-        string currency;
+        address currency;
         uint256 deadline;
         ProposedOutcome initiatorOutcome;
         ProposedOutcome opponentOutcome;
@@ -32,8 +32,6 @@ contract Beths is Ownable, UsernameManager {
 
     mapping (uint256 => string[]) public betsToProofs;
 
-    mapping (string => address) private supportedTokens;
-
     uint256 public ownerFee = 2;
     uint256 public mediatorFee = 2;
 
@@ -43,24 +41,14 @@ contract Beths is Ownable, UsernameManager {
         address indexed opponent
     );
 
-    event CurrencyAdded(
-        string symbol,
-        address tokenContract
-    );
-
     function createBet(
         address opponent,
         address mediator,
         uint256 amount,
-        string calldata currency,
+        address currency,
         uint256 deadline
     ) external {
-        require(
-            supportedTokens[currency] != address(0),
-            "Token is not supported"
-        );
-
-        IERC20 token = IERC20(supportedTokens[currency]);
+        IERC20 token = IERC20(currency);
 
         require(
             token.allowance(msg.sender, address(this)) >= amount,
@@ -91,12 +79,6 @@ contract Beths is Ownable, UsernameManager {
         emit BetCreated(betId, msg.sender, opponent);
     }
 
-    function addCurrency(string calldata symbol, address tokenAddress) external onlyOwner() {
-        supportedTokens[symbol] = tokenAddress;
-
-        emit CurrencyAdded(symbol, tokenAddress);
-    }
-
     function joinBet(uint256 betId) external {
         require(
             bets[betId].status == Status.Open,
@@ -108,7 +90,7 @@ contract Beths is Ownable, UsernameManager {
             "You cannot join this bet"
         );
 
-        IERC20 token = IERC20(supportedTokens[bets[betId].currency]);
+        IERC20 token = IERC20(bets[betId].currency);
 
         require(
             token.allowance(msg.sender, address(this)) >= bets[betId].amount,
@@ -195,7 +177,7 @@ contract Beths is Ownable, UsernameManager {
             receiver = bets[betId].opponent;
         }
 
-        IERC20 token = IERC20(supportedTokens[bets[betId].currency]);
+        IERC20 token = IERC20(bets[betId].currency);
 
         uint256 totalAmount = SafeMath.mul(bets[betId].amount, 2);
 
@@ -263,7 +245,7 @@ contract Beths is Ownable, UsernameManager {
         address,
         address,
         uint256,
-        string memory,
+        address,
         uint256
     ) {
         return (
