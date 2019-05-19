@@ -41,6 +41,14 @@ contract Beths is Ownable, UsernameManager {
         address indexed opponent
     );
 
+    function updateOwnerFee(uint256 newOwnerFee) external onlyOwner() {
+        ownerFee = newOwnerFee;
+    }
+
+    function updateMediatorFee(uint256 newMediatorFee) external onlyOwner() {
+        mediatorFee = newMediatorFee;
+    }
+
     function createBet(
         address opponent,
         address mediator,
