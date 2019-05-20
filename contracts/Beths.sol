@@ -11,7 +11,7 @@ import "./UsernameManager.sol";
  * @dev This contract is the base of our project
  */
 contract Beths is Ownable, UsernameManager {
-    enum Status { Open, OnGoing, Disputed, Won, Lost }
+    enum Status { Open, OnGoing, Disputed, Won, Lost, Exited, Canceled }
     enum ProposedOutcome { Undefined, Won, Lost }
 
     struct Bet {
@@ -91,6 +91,11 @@ contract Beths is Ownable, UsernameManager {
         require(
             bets[betId].status == Status.Open,
             "Bet is not open anymore"
+        );
+
+        require(
+            bets[betId].deadline > now,
+            "Deadline has already been reached"
         );
 
         require(
@@ -212,6 +217,84 @@ contract Beths is Ownable, UsernameManager {
 
         require(
             token.transfer(receiver, SafeMath.sub(totalAmount, SafeMath.add(ownerFees, mediatorFees))),
+            "Transfer failed"
+        );
+
+        require(
+            token.transfer(owner(), ownerFees),
+            "Transfer failed"
+        );
+    }
+
+    function cancelBet(uint256 betId) external {
+        require(
+            msg.sender == bets[betId].initiator,
+            "Sender must be the initiator"
+        );
+
+        require(
+            bets[betId].deadline < now,
+            "Deadline has not been reached"
+        );
+
+        require(
+            bets[betId].status == Status.Open,
+            "Bet is not open anymore"
+        );
+
+        IERC20 token = IERC20(bets[betId].currency);
+
+        bets[betId].status = Status.Canceled;
+
+        require(
+            token.transfer(bets[betId].initiator, bets[betId].amount),
+            "Transfer failed"
+        );
+    }
+
+    function exitBet(uint256 betId) external {
+        require(
+            msg.sender == bets[betId].initiator
+            || msg.sender == bets[betId].opponent,
+            "Sender must be the initiator or the opponent"
+        );
+
+        require(
+            bets[betId].deadline < now,
+            "Deadline has not been reached"
+        );
+
+        address receiver;
+
+        if (msg.sender == bets[betId].initiator) {
+            require(
+                bets[betId].opponentOutcome = ProposedOutcome.Undefined,
+                "Opponent has proposed an outcome"
+            );
+
+            receiver = bets[betId].initiator;
+        } else if (msg.sender == bets[betId].opponent) {
+            require(
+                bets[betId].initiatorOutcome = ProposedOutcome.Undefined,
+                "Initiator has proposed an outcome"
+            );
+
+            receiver = bets[betId].initiator;
+        }
+
+        IERC20 token = IERC20(bets[betId].currency);
+
+        uint256 totalAmount = SafeMath.mul(bets[betId].amount, 2);
+
+        uint256 ownerFees = SafeMath.mul(
+            totalAmount / 100,
+            ownerFee
+        );
+
+        bets[betId].status = Status.Exited;
+
+        require(
+            token.transfer(receiver, SafeMath.sub(totalAmount, ownerFees)),
             "Transfer failed"
         );
 
