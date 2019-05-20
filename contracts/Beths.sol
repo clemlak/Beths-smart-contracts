@@ -41,14 +41,30 @@ contract Beths is Ownable, UsernameManager {
         address indexed opponent
     );
 
+    /**
+     * @dev Updates the fee rewarding the owner
+     * @param newOwnerFee The % of the new fee
+     */
     function updateOwnerFee(uint256 newOwnerFee) external onlyOwner() {
         ownerFee = newOwnerFee;
     }
 
+    /**
+     * @dev Updates the fee rewarding the mediator
+     * @param newMediatorFee The % of the new mediator
+     */
     function updateMediatorFee(uint256 newMediatorFee) external onlyOwner() {
         mediatorFee = newMediatorFee;
     }
 
+    /**
+     * @dev Creates a new bet
+     * @param opponent The address of the opponent
+     * @param mediator The address of the mediator
+     * @param amount The amount required by both parties
+     * @param currency The address of the currency used
+     * @param deadline The deadline to enter the bet and reply
+     */
     function createBet(
         address opponent,
         address mediator,
@@ -87,6 +103,10 @@ contract Beths is Ownable, UsernameManager {
         emit BetCreated(betId, msg.sender, opponent);
     }
 
+    /**
+     * @dev Joins a bet
+     * @param betId The id of the bet to join
+     */
     function joinBet(uint256 betId) external {
         require(
             bets[betId].status == Status.Open,
@@ -118,6 +138,12 @@ contract Beths is Ownable, UsernameManager {
         bets[betId].status = Status.OnGoing;
     }
 
+    /**
+     * @dev Proposes an outcome for a given bet
+     * @param betId The id of a bet
+     * @param proposedOutcome The proposed outcome
+     * @param proof The url of a proof
+     */
     function proposeOutcome(
         uint256 betId,
         ProposedOutcome proposedOutcome,
@@ -163,6 +189,10 @@ contract Beths is Ownable, UsernameManager {
         }
     }
 
+    /**
+     * @dev Gets the funds from a won bet
+     * @param betId The id of the bet
+     */
     /* solhint-disable-next-line function-max-lines */
     function getFunds(uint256 betId) external {
         require(
@@ -226,6 +256,10 @@ contract Beths is Ownable, UsernameManager {
         );
     }
 
+    /**
+     * @dev Cancels a bet
+     * @param betId The id of a bet
+     */
     function cancelBet(uint256 betId) external {
         require(
             msg.sender == bets[betId].initiator,
@@ -252,6 +286,10 @@ contract Beths is Ownable, UsernameManager {
         );
     }
 
+    /**
+     * @dev Exists a bet
+     * @param betId The id of a bet
+     */
     function exitBet(uint256 betId) external {
         require(
             msg.sender == bets[betId].initiator
@@ -268,14 +306,14 @@ contract Beths is Ownable, UsernameManager {
 
         if (msg.sender == bets[betId].initiator) {
             require(
-                bets[betId].opponentOutcome = ProposedOutcome.Undefined,
+                bets[betId].opponentOutcome == ProposedOutcome.Undefined,
                 "Opponent has proposed an outcome"
             );
 
             receiver = bets[betId].initiator;
         } else if (msg.sender == bets[betId].opponent) {
             require(
-                bets[betId].initiatorOutcome = ProposedOutcome.Undefined,
+                bets[betId].initiatorOutcome == ProposedOutcome.Undefined,
                 "Initiator has proposed an outcome"
             );
 
@@ -304,6 +342,11 @@ contract Beths is Ownable, UsernameManager {
         );
     }
 
+    /**
+     * @dev Solves a dispute
+     * @param betId The id of a bet
+     * @param outcome The outcome of the bet
+     */
     function solveDispute(uint256 betId, Status outcome) external {
         require(
             msg.sender == bets[betId].mediator,
@@ -325,12 +368,22 @@ contract Beths is Ownable, UsernameManager {
         bets[betId].hasBeenDisputed = true;
     }
 
+    /**
+     * @dev Gets the status of a bet
+     * @param betId The id of a bet
+     * @return The status of the bet
+     */
     function getBetStatus(uint256 betId) external view returns (
         Status status
     ) {
         return bets[betId].status;
     }
 
+    /**
+     * @dev Gets info about a bet
+     * @param betId The id of a bet
+     * @return Some info about the bet
+     */
     function getBetInfo(uint256 betId) external view returns (
         address,
         address,
@@ -349,6 +402,11 @@ contract Beths is Ownable, UsernameManager {
         );
     }
 
+    /**
+     * @dev Gets the outcomes proposed by both parties
+     * @param betId The id of a bet
+     * @return The outcomes proposed by both parties and if the bet has been disputed
+     */
     function getBetOutcome(uint256 betId) external view returns (
         ProposedOutcome,
         ProposedOutcome,
@@ -361,6 +419,11 @@ contract Beths is Ownable, UsernameManager {
         );
     }
 
+    /**
+     * @dev Checks if the funds have been withdrawn yet
+     * @param betId The id of a bet
+     * @return True if the funds have been withdrawn
+     */
     function areFundsWithdrawn(uint256 betId) external view returns (
         bool
     ) {
