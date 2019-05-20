@@ -8,6 +8,8 @@ const Status = {
   Disputed: 2,
   Won: 3,
   Lost: 4,
+  Exited: 5,
+  Canceled: 6,
 };
 
 const ProposedOutcome = {
